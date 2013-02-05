@@ -8,11 +8,10 @@ require File.dirname(File.expand_path(__FILE__))+'/AchieverEngine/Version'
 
 module AchieverEngine
 
-
     autoload :Utils,        'AchieverEngine/Utils'
-    autoload :Search,       'AchieverEngine/search'
-    autoload :InProgress,   'AchieverEngine/in_progress'
-    autoload :Validated,    'AchieverEngine/validated'
+    autoload :Search,       'AchieverEngine/Search'
+    autoload :InProgress,   'AchieverEngine/InProgress'
+    autoload :Obtained,     'AchieverEngine/Obtained'
     autoload :Graph,        'AchieverEngine/Graph'
 
 =begin
