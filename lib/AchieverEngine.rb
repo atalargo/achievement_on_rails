@@ -4,7 +4,10 @@ require File.dirname(File.expand_path(__FILE__))+'/../app/models/user_achievemen
 require File.dirname(File.expand_path(__FILE__))+'/../app/models/user_in_progress_achievement'
 require File.dirname(File.expand_path(__FILE__))+'/../app/models/user_obtained_achievement'
 
+require File.dirname(File.expand_path(__FILE__))+'/AchieverEngine/Version'
+
 module AchieverEngine
+
 
     autoload :Utils,        'AchieverEngine/Utils'
     autoload :Search,       'AchieverEngine/search'

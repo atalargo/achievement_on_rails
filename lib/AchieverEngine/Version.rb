@@ -1,0 +1,4 @@
+
+module AchieverEngine
+    VERSION = '0.0.3'
+end
