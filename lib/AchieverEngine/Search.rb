@@ -1,13 +1,21 @@
 
 module AchieverEngine
     module Search
+
+        ALL_MODE                        = :all
+        ACHIEVEMENT_AVAILABLE_MODE      = :available
+        ACHIEVEMENT_IN_PROGRESS_MODE    = :in_progress
+        ACHIEVEMENT_OBTAINED_MODE       = :obtained
+
         def self.get_available_for_user(options)
 
-            achievements = Achievement.by_project(options[:project_id]).
+            project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
+
+            achievements = Achievement.by_project(project_id).
                 active.
                 typed(options[:type]) #.all_less(obtained_user_achs.map(&:achievement_id) + in_progress_user_achs.map(&:achievement_id)) #.includes(:parents, :children)
 
-            achievementRelations = AchievementRelation.by_project(options[:project_id])
+            achievementRelations = AchievementRelation.by_project(project_id)
 
             obtained_user_achs = AchieverEngine::Obtained.get_for_user_and_achievements(options, achievements)
             in_progress_user_achs = AchieverEngine::InProgress.get_for_user_and_achievements(options, achievements)
@@ -41,9 +49,9 @@ module AchieverEngine
 
             obtainable_ids = obtainable_ids + (achievements.map(&:id) - reject_ids - obtained.keys)
 
-            print "Final #{obtainable_ids.uniq!}\n"
+            print "Final available : #{obtainable_ids.uniq!}\n"
 
-            Achievement.by_project(options[:project_id]).
+            Achievement.by_project(project_id).
                 active.
                 typed(options[:type]).
                 where(Achievement.arel_table[:id].in(obtainable_ids)) #.includes(:parents, :children)
@@ -55,23 +63,30 @@ module AchieverEngine
 
         def self.get_available_for_user_by_nanoc(options)
 
-            all_achievements = Achievement.by_project(options[:project_id]).
+            project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
+            user_id     = (options[:user].is_a?(Numeric) ? options[:user] : options[:user].id)
+
+            all_achievements = Achievement.by_project(project_id).
                         active.
                         typed(options[:type]).
                         includes(:children).all
+
+            graph = AchieverEngine::Graph.create_nanoc_directed_graph(all_achievements)
+
 p options
+
             obtained_user_achs = if options[:user_obtaineds]
                                         options[:user_obtaineds]
-                                else
-                                        AchieverEngine::Obtained.get_for_user_and_achievements({:project_id => options[:project_id], :user_id => options[:user_id]}, all_achievements).all
+                                    else
+                                        AchieverEngine::Obtained.get_for_user_and_achievements(options, all_achievements).all
+#                                     AchieverEngine::Obtained.get_for_user_and_achievements({:project_id => project_id, :user_id => user_id}, all_achievements).all
                                 end
 
             obtained_ids = obtained_user_achs.map(&:achievement_id)
 
-#             in_progress_user_achs = AchieverEngine::InProgress.get_for_user_and_achievements({:project_id => options[:project_id], :user_id => options[:user_id]}, all_achievements).all
+#             in_progress_user_achs = AchieverEngine::InProgress.get_for_user_and_achievements({:project_id => project_id, :user_id => user_id}, all_achievements).all
 
 
-            graph = AchieverEngine::Graph.create_nanoc_directed_graph(all_achievements)
 
             removes = []
 
@@ -112,11 +127,18 @@ p options
             graph.roots
         end
 
+
+
         def self.achievements_for(options, mode = nil, mongo_data = false)
 
+            project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
+            user_id     = (options[:user].is_a?(Numeric) ? options[:user] : options[:user].id)
+            mode        = (options[:mode].nil? ? ALL_MODE : options[:mode])
+            mongo_data  = (options[:mongo_data].nil? ? false : true)
+
             user_achi = case mode
-                when 'available'
-                    availables = self.get_available_for_user_by_nanoc(:project_id => options[:project].id, :user_id => options[:user].id, :user_obtaineds => (options[:user_obtaineds] ? options[:user_obtaineds] : nil))
+                when ACHIEVEMENT_AVAILABLE_MODE
+                    availables = self.get_available_for_user_by_nanoc(:project => project_id, :user => user_id, :user_obtaineds => (options[:user_obtaineds] ? options[:user_obtaineds] : nil))
 
                     if options[:clean_achievements] && options[:clean_achievements].is_a?( Array ) && options[:clean_achievements][0].is_a?( Integer)
                         availables = availables.collect do |ach|
@@ -124,30 +146,25 @@ p options
                         end
                     end
                     availables
-                when 'obtained'
-                    user_achs = AchieverEngine::Obtained.get_for_user_and_achievements(:project_id => options[:project].id, :user_id => options[:user].id)
+                when ACHIEVEMENT_OBTAINED_MODE
+                    user_achs = AchieverEngine::Obtained.get_for_user_and_achievements(options)
                     achs = if user_achs.size == 0
-                        []
-                    else
-                        Achievement.active.by_project(options[:project_id]).
-                        in(user_achs.map(&:achievement_id))
+                                []
+                            else
+                                Achievement.active.by_project(project_id).in(user_achs.map(&:achievement_id))
                     end
                     if mongo_data
                         {:achievements => achs, :obtained => user_achs}
                     else
                         achs
                     end
-                when 'in_progress'
-                    user_ach_ps = if options.is_a? Hash
-                                    AchieverEngine::InProgress.get_for_user_and_achievements(:project_id => options[:project].id, :user_id => options[:user].id)
-                                else
-                                    AchieverEngine::InProgress.get_for_user_and_achievements(options)
-                    end
+                when ACHIEVEMENT_IN_PROGRESS_MODE
+                    user_ach_ps = AchieverEngine::InProgress.get_for_user_and_achievements(options)
+
                     achs = if user_ach_ps.size == 0
-                        []
-                    else
-                        Achievement.active.by_project(options[:project_id]).
-                        in(user_ach_ps.map(&:achievement_id))
+                                []
+                            else
+                                Achievement.active.by_project(project_id).in(user_ach_ps.map(&:achievement_id))
                     end
                     if mongo_data
                         {:achievements => achs, :in_progress_data => user_ach_ps}
@@ -155,18 +172,18 @@ p options
                         achs
                     end
                 else
-                    user_achs = UserAchievement.by_project(options[:project].id).by_user(options[:user].id).first
+                    user_achs = UserAchievement.by_project(project_id).by_user(user_id).first
                     {
-                        :obtained => (user_achs.nil? ? [] : ( user_achs.obtained.size == 0 ?
+                        :obtained => (user_achs.nil? ? [] : (
+                                                            user_achs.obtained.size == 0 ?
                                                                 [] :
-                                                                Achievement.active.by_project(options[:project_id]).in(user_achs.obtained.map(&:achievement_id))
-                                                          )
-                                     ),
-                        :in_progress => (user_achs.nil? ? [] : ( user_achs.in_progress.size == 0  ?
-                                                                [] :
-                                                                Achievement.active.by_project(options[:project_id]).in(user_achs.in_progress.map(&:achievement_id))
-                                                            )
-                                        )
+                                                                Achievement.active.by_project(project_id).in(user_achs.obtained.map(&:achievement_id))
+                        )),
+                        :in_progress => (user_achs.nil? ? [] : (
+                                                                user_achs.in_progress.size == 0  ?
+                                                                    [] :
+                                                                    Achievement.active.by_project(project_id).in(user_achs.in_progress.map(&:achievement_id))
+                        ))
                     }
             end
         end

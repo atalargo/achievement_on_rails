@@ -25,6 +25,10 @@ class Achievement < ActiveRecord::Base
     scope :typed, lambda { |type| where(:on_type => type) unless type.nil? }
     scope :in, lambda { |idlists| where(arel_table[:id].in(idlists)) unless (idlists.nil? || idlists.empty?) }
 
+    before_create   :check_create_cyclic
+    before_update   :check_update_cyclic
+
+
     def root?
         parents.size == 0
     end
@@ -116,6 +120,23 @@ class Achievement < ActiveRecord::Base
         }.flatten).flatten
         #         ret.concat(subc)
         #ActiveRecord::Relation.new ret
+    end
+
+    private
+
+    def check_create_cyclic(record)
+        ach_query = Achievement.by_project(record.project_id)
+        ach_query.active if record.parent.active
+
+        AchieverEngine::Utils::DirectedGraph.new(ach_query.includes(:children).all).check_cyclic_for_vertex(record)
+    end
+
+    def check_update_cyclic(record)
+        if record.active
+            check_cyclic(record)
+        else
+            true
+        end
     end
 
 end

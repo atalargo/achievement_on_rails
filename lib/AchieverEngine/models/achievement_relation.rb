@@ -10,7 +10,8 @@ class AchievementRelation < ActiveRecord::Base
     scope :by_parent, lambda { |parent_id| where(:parent_id => parent_id) unless parent_id.nil? }
     scope :by_child, lambda { |child_id| where(:achievement_id => child_id) unless child_id.nil? }
 
-    before_validation :add_project_before
+    before_validation   :add_project_before
+    before_save         :check_cyclic
 
     def self.all_ids(options)
         ids = []
@@ -20,14 +21,19 @@ class AchievementRelation < ActiveRecord::Base
         ids.uniq
     end
 
+    private
+
     def add_project_before
-        Rails.logger.debug(self.project_id)
-        Rails.logger.debug(self.parent)
-        Rails.logger.debug(self.parent.project_id)
         self.project_id = self.parent.project_id
-        Rails.logger.debug(self.project_id)
     end
 
+    def check_cyclic(record)
+        ach_query = Achievement.by_project(project_id)
+        ach_query.active if parent.active
+
+        AchieverEngine::Utils::DirectedGraph.new(ach_query.includes(:children).all)graph.check_cyclic_for_egde(record)
+
+    end
 
 end
 

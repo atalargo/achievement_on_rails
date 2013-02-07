@@ -1,7 +1,7 @@
 
 module AchieverEngine
     module Utils
-        autoload :DirectedGraph, File.dirname(File.expand_path(__FILE__))+'/Utils/Utils'
+        autoload :DirectedGraph, 'AchieverEngine/Utils/Utils'
 
     end
 end

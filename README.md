@@ -18,7 +18,7 @@ To install it, in your Gemfile add :
 
 After this, launch in your rails app root directory :
 
-> rake achiever_engine
+> rails generate achiever_engine
 
 > rake db:migrate
 
