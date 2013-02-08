@@ -25,6 +25,7 @@ module AchieverEngine
             graph = Utils::DirectedGraph.new(achievements)
             achievements.each do |ach|
                 graph.add_vertex ach
+                p ach.children
                 ach.children.each do |child|
                     graph.add_edge ach,child
                 end

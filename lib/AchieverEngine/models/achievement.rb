@@ -10,20 +10,27 @@ class Achievement < ActiveRecord::Base
     # 	acts_as_tree :name_column => :name
 
     has_and_belongs_to_many :parents, :class_name => 'Achievement', :join_table => 'achievement_relations', :association_foreign_key => :parent_id,
+                        :before_add => :relation_validator_parent,
                         :insert_sql => proc {|record|%{
                             INSERT INTO #{AchievementRelation.table_name}(project_id, parent_id, achievement_id) VALUES (#{self.project_id}, parent_id = #{record.id}, #{self.id})
                         }}
 
-    has_and_belongs_to_many :children, :class_name => 'Achievement', :join_table => 'achievement_relations', :association_foreign_key => :achievement_id, :foreign_key => :parent_id,
+    has_and_belongs_to_many :children, :class_name => 'Achievement', :join_table => 'achievement_relations', :foreign_key => :parent_id,
+                        :before_add => :relation_validator_child,
                         :insert_sql => proc {|record|%{
                             INSERT INTO #{AchievementRelation.table_name}(project_id, parent_id, achievement_id) VALUES (#{self.project_id}, #{self.id}, #{record.id} )
                         }}
+
+#     has_many :achievement_relations_children, :class_name => 'AchievementRelation', :foreign_key => :parent_id
+#     has_many :children, :class_name => 'Achievement', :through => :achievement_relations_children, :foreign_key => :parent_id, :source => :achievement
+#     :destroy :association_foreign_key => :achievement_id,
 
     scope :by_project, lambda { |proj_id| where(:project_id => proj_id) unless proj_id.nil? }
     scope :active, lambda {  where(:active => true) }
     scope :unactive, lambda {  where(:active => false) }
     scope :typed, lambda { |type| where(:on_type => type) unless type.nil? }
     scope :in, lambda { |idlists| where(arel_table[:id].in(idlists)) unless (idlists.nil? || idlists.empty?) }
+
 
     before_create   :check_create_cyclic
     before_update   :check_update_cyclic
@@ -125,18 +132,29 @@ class Achievement < ActiveRecord::Base
     private
 
     def check_create_cyclic(record)
-        ach_query = Achievement.by_project(record.project_id)
-        ach_query.active if record.parent.active
-
-        AchieverEngine::Utils::DirectedGraph.new(ach_query.includes(:children).all).check_cyclic_for_vertex(record)
+        p "check_create_cyclic"
+        AchieverEngine::Graph.create_nanoc_directed_graph(Achievement.by_project(record.project_id).includes(:children).all).check_cyclic_for_vertex(record)
     end
 
     def check_update_cyclic(record)
+        p "check_update_cyclic"
         if record.active
             check_cyclic(record)
         else
             true
         end
+    end
+
+    def relation_validator_child(record)
+        relation_validator(self, record)
+    end
+
+    def relation_validator_parent(record)
+        relation_validator_parent(record, self)
+    end
+
+    def relation_validator(parent, child)
+       AchievementRelation.check_relation(parent, child)
     end
 
 end

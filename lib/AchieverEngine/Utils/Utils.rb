@@ -6,25 +6,66 @@ module AchieverEngine
         class DirectedGraph < AchieverEngine::Utils::Nanoc::DirectedGraph
 
 
+
 =begin
-        @return [boolean] true if cycle found, false is all ok
+    Suppress edge in Graph (like delete_edge) AND delete relation in Database directly
+
+
+    @param [mixed] Achievement from vertex OR Edge itself (AchievementRelation instance)
+    @param [mixed] Achievement to vertex OR nil
+
+    @return [void if edge in graph AND relation in DB are deleted return true, false in other case
 =end
-            def check_cyclic_for_egde(edge)
-                !successors_of(new_edge.achievement).index(new_edge.parent).nil?
+            def delete_edge!(from_or_edge, to = nil)
+                if (to == nil && from_or_edge.respond_to?( :achievement))
+                    to = from_or_edge.achievement
+                    from_or_edge = from_or_edge.parent
+                end
+
+                # delete in graph
+                delete_edge(from_or_edge, to)
+
+                # delete in DB
+                if !from.children.delete(to)
+                    # in reason of failed reltion deleting in DB, re add the edge in the graph
+                    add_edge(from_or_edge, to)
+                    false
+                else
+                    true
+                end
             end
 
+=begin
+    @param [AchievementRelation]
+
+    @return [boolean] true if cycle found, false is all ok
+=end
+            def check_cyclic_for_egde(edge)
+                !successors_of(edge.achievement).index(edge.parent).nil?
+            end
 
 =begin
-        @return [boolean] true if cycle found, false is all ok
+    @param [Achievement]
+
+    @return [boolean] true if cycle found, false is all ok
 =end
             def check_cyclic_for_vertex(vertex)
                 return false if @roots.include? vertex
 
-                !get_cyclic_for_vertex.empty?
+                !get_cyclic_for_vertex(vertex).empty?
             end
-
 =begin
-        @return [Array] Return array of all vertices which are in a cyclic path of the given vertex
+    @param[AchievementRelation]
+
+    @return [boolean] true if superflous edge
+=end
+            def check_superfluous_edge(edge)
+                !get_superflous_
+            end
+=begin
+    @param [Achievement]
+
+    @return [Array] Return array of all vertices which are in a cyclic path of the given vertex
 =end
             def get_cyclic_for_vertex(vertex)
                 return [] if @roots.include? vertex
@@ -32,8 +73,15 @@ module AchieverEngine
                 successors_of(vertex) & predecessors_of(vertex)
             end
 
+=begin
+    @param [AchievementRelation]
+
+    @return [Array] Return array of all vertices which are in a cyclic path of the given edge
+
+    TODO écrire un code qui serve à qq chose
+=end
             def get_cyclic_for_edge(edge)
-                successors_of(new_edge.achievement)
+                successors_of(edge.achievement)
             end
 
             def get_cyclic_path_for_vertex(vertex)
@@ -77,16 +125,19 @@ module AchieverEngine
 
             end
 
+=begin
+    @return [Array] Return array of all vertices which are in all cyclic path in the all graph
+=end
             def check_cyclic
             end
 
-
+            private
 =begin
     @return [boolean] true if cycle found, false is all ok
 =end
-            def check_cyclic_for_new_edge(new_edge)
-                !successors_of(new_edge.achievement).index(new_edge.parent).nil?
-            end
+#             def check_cyclic_for_new_edge(new_edge)
+#                 !successors_of(new_edge.achievement).index(new_edge.parent).nil?
+#             end
         end
 
         def self.filter_options(options)
@@ -95,5 +146,6 @@ module AchieverEngine
             user_id     = (options[:user].is_a?(Numeric) ? options[:user] : options[:user].id)
 
         end
+
     end
 end
