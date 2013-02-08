@@ -60,8 +60,9 @@ module AchieverEngine
     @return [boolean] true if superflous edge
 =end
             def check_superfluous_edge(edge)
-                !get_superflous_
+                !get_superflous_edge(edge)
             end
+
 =begin
     @param [Achievement]
 
@@ -71,6 +72,20 @@ module AchieverEngine
                 return [] if @roots.include? vertex
 
                 successors_of(vertex) & predecessors_of(vertex)
+            end
+
+=begin
+    @param [Achievement]
+
+    @return [Array] Return array of all vertices which are in an already existant path between the 2 vertices of the edges
+=end
+            def get_superflous_edge(edge)
+                # si le nouvel enfant n'est pas déjà dans tout les enfants quelque soit la profondeur du parent, renvoyé directement []
+                return [] if (!successors_of(edge.parent).include?(edge.achievement))
+
+                #construire le(s) chemin(s) qui les relit déjà
+                paths = []
+
             end
 
 =begin
