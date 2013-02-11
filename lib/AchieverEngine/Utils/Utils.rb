@@ -83,7 +83,7 @@ module AchieverEngine
                 # si le nouvel enfant n'est pas déjà dans tout les enfants quelque soit la profondeur du parent, renvoyé directement []
                 return [] if (!successors_of(edge.parent).include?(edge.achievement))
 
-                #construire le(s) chemin(s) qui les relit déjà
+                # TODO construire le(s) chemin(s) qui les relit déjà
                 paths = []
 
             end
@@ -136,17 +136,16 @@ module AchieverEngine
                 local_path
             end
 
-            def get_dfs(vertex, visited)
-
-            end
-
 =begin
     @return [Array] Return array of all vertices which are in all cyclic path in the all graph
+
+    TODO
 =end
             def check_cyclic
             end
 
             private
+
 =begin
     @return [boolean] true if cycle found, false is all ok
 =end

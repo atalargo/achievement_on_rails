@@ -13,6 +13,8 @@ autoload :UserObtainedAchievement,      'AchieverEngine/models/user_obtained_ach
 
 module AchieverEngine
 
+    autoload :Config,       'AchieverEngine/Config'
+    autoload :Behaviour,    'AchieverEngine/Behaviour'
     autoload :Utils,        'AchieverEngine/Utils'
     autoload :Search,       'AchieverEngine/Search'
     autoload :InProgress,   'AchieverEngine/InProgress'
@@ -20,7 +22,10 @@ module AchieverEngine
     autoload :Graph,        'AchieverEngine/Graph'
     autoload :VERSION,      'AchieverEngine/Version'
 
-
+    def self.setup
+        yield AchieverEngine::Config
+        AchieverEngine::Config.parse_configuration
+    end
 =begin
 
     @group Test Achievements for an user
