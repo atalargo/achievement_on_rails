@@ -9,6 +9,8 @@ module AchieverEngine
         mattr_accessor :block_available_after_progress
         @@block_available_after_progress = false
 
+        mattr_accessor :use_redis
+        @@use_redis = false
 
         @@base_behaviour_path = [File.dirname(__FILE__) + '/Behaviour']
         @@behaviours_list = {}
@@ -19,7 +21,7 @@ module AchieverEngine
         def self.parse_configuration
             unless @@extra_behaviours_paths.nil?
                 @@extra_behaviours_paths = [@@extra_behaviours_paths] if !@@extra_behaviours_paths.is_a? Array
-                @@base_behaviour_path = @@base_behaviour_path && @@extra_behaviours_paths
+                @@base_behaviour_path = @@base_behaviour_path.concat( @@extra_behaviours_paths).uniq
             end
 
             @@base_behaviour_path.each do |path|
@@ -33,7 +35,7 @@ module AchieverEngine
             end
 
             @@behaviours_list.keys.each do |class_name|
-                autoload class_name.to_sym, @@behaviours_list[class_name]
+#                 autoload class_name.to_sym, @@behaviours_list[class_name]
                 require @@behaviours_list[class_name]
             end
 

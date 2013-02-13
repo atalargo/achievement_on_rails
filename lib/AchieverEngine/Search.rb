@@ -9,13 +9,10 @@ module AchieverEngine
 
         def self.get_available_for_user(options)
 
-            project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
 
-            achievements = Achievement.by_project(project_id).
-                active.
-                typed(options[:type]) #.all_less(obtained_user_achs.map(&:achievement_id) + in_progress_user_achs.map(&:achievement_id)) #.includes(:parents, :children)
+            achievements = Achievement.active.typed(options[:type]) #.all_less(obtained_user_achs.map(&:achievement_id) + in_progress_user_achs.map(&:achievement_id)) #.includes(:parents, :children)
 
-            achievementRelations = AchievementRelation.by_project(project_id)
+            achievementRelations = AchievementRelation.all
 
             obtained_user_achs = AchieverEngine::Obtained.get_for_user_and_achievements(options, achievements)
             in_progress_user_achs = AchieverEngine::InProgress.get_for_user_and_achievements(options, achievements)
@@ -51,8 +48,7 @@ module AchieverEngine
 
             print "Final available : #{obtainable_ids.uniq!}\n"
 
-            Achievement.by_project(project_id).
-                active.
+            Achievement.active.
                 typed(options[:type]).
                 where(Achievement.arel_table[:id].in(obtainable_ids)) #.includes(:parents, :children)
 
@@ -63,11 +59,9 @@ module AchieverEngine
 
         def self.get_available_for_user_by_nanoc(options)
 
-            project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
             user_id     = (options[:user].is_a?(Numeric) ? options[:user] : options[:user].id)
 
-            all_achievements = Achievement.by_project(project_id).
-                        active.
+            all_achievements = Achievement.active.
                         typed(options[:type]).
                         includes(:children).all
 
@@ -76,15 +70,17 @@ module AchieverEngine
 p options
 
             obtained_user_achs = if options[:user_obtaineds]
-                                        options[:user_obtaineds]
-                                    else
-                                        AchieverEngine::Obtained.get_for_user_and_achievements(options, all_achievements).all
-#                                     AchieverEngine::Obtained.get_for_user_and_achievements({:project_id => project_id, :user_id => user_id}, all_achievements).all
-                                end
+                options[:user_obtaineds]
+            else
+                ao = AchieverEngine::Obtained.get_for_user_and_achievements(options, all_achievements)
+                if ao
+                    ao.all
+                else
+                    []
+                end
+            end
 
             obtained_ids = obtained_user_achs.map(&:achievement_id)
-
-#             in_progress_user_achs = AchieverEngine::InProgress.get_for_user_and_achievements({:project_id => project_id, :user_id => user_id}, all_achievements).all
 
 
 
@@ -131,14 +127,13 @@ p options
 
         def self.achievements_for(options, mode = nil, mongo_data = false)
 
-            project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
             user_id     = (options[:user].is_a?(Numeric) ? options[:user] : options[:user].id)
             mode        = (options[:mode].nil? ? ALL_MODE : options[:mode])
             mongo_data  = (options[:mongo_data].nil? ? false : true)
 
             user_achi = case mode
                 when ACHIEVEMENT_AVAILABLE_MODE
-                    availables = self.get_available_for_user_by_nanoc(:project => project_id, :user => user_id, :user_obtaineds => (options[:user_obtaineds] ? options[:user_obtaineds] : nil))
+                    availables = self.get_available_for_user_by_nanoc(:user => user_id, :user_obtaineds => (options[:user_obtaineds] ? options[:user_obtaineds] : nil))
 
                     if options[:clean_achievements] && options[:clean_achievements].is_a?( Array ) && options[:clean_achievements][0].is_a?( Integer)
                         availables = availables.collect do |ach|
@@ -148,10 +143,10 @@ p options
                     availables
                 when ACHIEVEMENT_OBTAINED_MODE
                     user_achs = AchieverEngine::Obtained.get_for_user_and_achievements(options)
-                    achs = if user_achs.size == 0
-                                []
-                            else
-                                Achievement.active.by_project(project_id).in(user_achs.map(&:achievement_id))
+                    achs = if !user_achs || user_achs.size == 0
+                        []
+                    else
+                        Achievement.active.in(user_achs.map(&:achievement_id))
                     end
                     if mongo_data
                         {:achievements => achs, :obtained => user_achs}
@@ -161,28 +156,29 @@ p options
                 when ACHIEVEMENT_IN_PROGRESS_MODE
                     user_ach_ps = AchieverEngine::InProgress.get_for_user_and_achievements(options)
 
-                    achs = if user_ach_ps.size == 0
-                                []
-                            else
-                                Achievement.active.by_project(project_id).in(user_ach_ps.map(&:achievement_id))
+                    achs = if !user_ach_ps || user_ach_ps.size == 0
+                        []
+                    else
+                        Achievement.active.in(user_ach_ps.map(&:achievement_id))
                     end
+
                     if mongo_data
                         {:achievements => achs, :in_progress_data => user_ach_ps}
                     else
                         achs
                     end
                 else
-                    user_achs = UserAchievement.by_project(project_id).by_user(user_id).first
+                    user_achs = UserAchievement.by_user(user_id).first
                     {
                         :obtained => (user_achs.nil? ? [] : (
                                                             user_achs.obtained.size == 0 ?
                                                                 [] :
-                                                                Achievement.active.by_project(project_id).in(user_achs.obtained.map(&:achievement_id))
+                                                                Achievement.active.in(user_achs.obtained.map(&:achievement_id))
                         )),
                         :in_progress => (user_achs.nil? ? [] : (
                                                                 user_achs.in_progress.size == 0  ?
                                                                     [] :
-                                                                    Achievement.active.by_project(project_id).in(user_achs.in_progress.map(&:achievement_id))
+                                                                    Achievement.active.in(user_achs.in_progress.map(&:achievement_id))
                         ))
                     }
             end
@@ -198,7 +194,7 @@ p options
             Benchmark.bm do |x|
                 x.report('get_available_for_user full AchievementRelation') do
                     t = Benchmark.realtime {
-                        self.get_available_for_user(:project_id => 4, :user_id => 2)
+                        self.get_available_for_user(:user_id => 2)
                     }
                 end
             end
@@ -210,7 +206,7 @@ p options
             Benchmark.bm do |x|
                 x.report('get_available_for_user_by_nanocg by Nanoc') do
                     t = Benchmark.realtime {
-                        self.get_available_for_user_by_nanocg(:project_id => 4, :user_id => 2)
+                        self.get_available_for_user_by_nanocg(:user_id => 2)
                     }
                 end
             end
@@ -225,17 +221,17 @@ p options
 
 Requête pour avoir les achievements disponible par le biais de la table de relation, enfants des achievements déjà réalisé ET achievement racine non encore fait
 
-SELECT achievement_id AS id FROM achievement_relations WHERE project_id = 4 AND parent_id IN (1,2) AND achievement_id NOT IN (1,2)
+SELECT achievement_id AS id FROM achievement_relations WHERE parent_id IN (1,2) AND achievement_id NOT IN (1,2)
 UNION
-SELECT parent_id AS id FROM achievement_relations WHERE project_id = 4 AND achievement_id NOT IN (1,2) AND parent_id NOT IN (1,2);
+SELECT parent_id AS id FROM achievement_relations WHERE achievement_id NOT IN (1,2) AND parent_id NOT IN (1,2);
 
 
 Il faut réunir à ce résultat les achievements orphelins non encore faits
 
-SELECT id FROM achievements WHERE project_id = 4 AND active = true AND id NOT IN (
-    SELECT achievement_id AS id FROM achievement_relations WHERE project_id = 4 AND achievement_id IN (1,2,3,7,8,6,10,11,12)
+SELECT id FROM achievements WHERE active = true AND id NOT IN (
+    SELECT achievement_id AS id FROM achievement_relations WHERE achievement_id IN (1,2,3,7,8,6,10,11,12)
     UNION
-    SELECT parent_id FROM achievement_relations WHERE project_id = 4 AND parent_id IN (1,2,3,7,8,6,10,11,12)
+    SELECT parent_id FROM achievement_relations WHERE parent_id IN (1,2,3,7,8,6,10,11,12)
 ) AND id NOT IN (1,2);
 
 
@@ -245,8 +241,8 @@ SELECT id FROM achievements WHERE project_id = 4 AND active = true AND id NOT IN
 # =end
 
 basic all maked in rails
-ARs = AchievementRelation.by_project(4).all
-Achs = Achievement.by_project(4).active.all
+ARs = AchievementRelation.all
+Achs = Achievement.active.all
 
 ach_all_ids = Achs.map(&:id)
 
@@ -282,18 +278,18 @@ obtainable_achs_b2 = []
 Benchmark.bmbm do |x|
     x.report("Benchmark find_by_sql") do
        100.times do |idtime|
-            achs = Achievement.by_project(4).active.all.to_a
+            achs = Achievement.active.all.to_a
             ach_ids = achs.map(&:id)
 
-            obtainable_achs_b1 = Achievement.find_by_sql("SELECT * FROM achievements WHERE project_id = 4 AND active = true AND id IN (
-                SELECT achievement_id AS id FROM achievement_relations WHERE project_id = 4 AND parent_id IN (#{obtained_str}) AND achievement_id NOT IN (#{obtained_str})
+            obtainable_achs_b1 = Achievement.find_by_sql("SELECT * FROM achievements WHERE active = true AND id IN (
+                SELECT achievement_id AS id FROM achievement_relations WHERE parent_id IN (#{obtained_str}) AND achievement_id NOT IN (#{obtained_str})
                 UNION
-                SELECT parent_id AS id FROM achievement_relations WHERE project_id = 4 AND achievement_id NOT IN (#{obtained_str}) AND parent_id NOT IN (#{obtained_str})
+                SELECT parent_id AS id FROM achievement_relations WHERE achievement_id NOT IN (#{obtained_str}) AND parent_id NOT IN (#{obtained_str})
             )")
-            obtainable_achs_b1.concat  Achievement.find_by_sql("SELECT * FROM achievements WHERE project_id = 4 AND active = true AND id NOT IN (
-                SELECT achievement_id AS id FROM achievement_relations WHERE project_id = 4 AND achievement_id IN (#{ach_ids.join(',')})
+            obtainable_achs_b1.concat  Achievement.find_by_sql("SELECT * FROM achievements WHERE active = true AND id NOT IN (
+                SELECT achievement_id AS id FROM achievement_relations WHERE achievement_id IN (#{ach_ids.join(',')})
                 UNION
-                SELECT parent_id FROM achievement_relations WHERE project_id = 4 AND parent_id IN (#{ach_ids.join(',')})
+                SELECT parent_id FROM achievement_relations WHERE parent_id IN (#{ach_ids.join(',')})
             ) AND id NOT IN (#{obtained_str})")
 
             obtainable_ids_b1 = obtainable_achs_b1.map(&:id)
@@ -304,19 +300,19 @@ Benchmark.bmbm do |x|
 
     x.report("Benchmard connection.select_all") do
         100.times do  |idtime|
-            achs = Achievement.by_project(4).active.all.to_a
+            achs = Achievement.active.all.to_a
             ach_ids = Achs.map(&:id)
 
-            obtainable_achs_b2 = Achievement.connection.select_all("SELECT * FROM achievements WHERE project_id = 4 AND active = true AND id IN (
-                SELECT achievement_id AS id FROM achievement_relations WHERE project_id = 4 AND parent_id IN (#{obtained_str}) AND achievement_id NOT IN (#{obtained_str})
+            obtainable_achs_b2 = Achievement.connection.select_all("SELECT * FROM achievements WHERE active = true AND id IN (
+                SELECT achievement_id AS id FROM achievement_relations WHERE parent_id IN (#{obtained_str}) AND achievement_id NOT IN (#{obtained_str})
                 UNION
-                SELECT parent_id AS id FROM achievement_relations WHERE project_id = 4 AND achievement_id NOT IN (#{obtained_str}) AND parent_id NOT IN (#{obtained_str})
+                SELECT parent_id AS id FROM achievement_relations WHERE achievement_id NOT IN (#{obtained_str}) AND parent_id NOT IN (#{obtained_str})
             )")
 
-            obtainable_achs_b2.concat  Achievement.connection.select_all("SELECT * FROM achievements WHERE project_id = 4 AND active = true AND id NOT IN (
-                SELECT achievement_id AS id FROM achievement_relations WHERE project_id = 4 AND achievement_id IN (#{ach_ids.join(',')})
+            obtainable_achs_b2.concat  Achievement.connection.select_all("SELECT * FROM achievements WHERE active = true AND id NOT IN (
+                SELECT achievement_id AS id FROM achievement_relations WHERE achievement_id IN (#{ach_ids.join(',')})
                 UNION
-                SELECT parent_id FROM achievement_relations WHERE project_id = 4 AND parent_id IN (#{ach_ids.join(',')})
+                SELECT parent_id FROM achievement_relations WHERE parent_id IN (#{ach_ids.join(',')})
             ) AND id NOT IN (#{obtained_str})")
 
             obtainable_ids_b2 = obtainable_achs_b2.map{|a| a["id"]}

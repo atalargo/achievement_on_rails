@@ -15,7 +15,6 @@ class UserObtainedAchievement
     validates :achievement_id, presence: true, uniqueness: true
 
     scope :by_user, ->(user) {where('user_achievement.user_id' => user)}
-    scope :by_project, ->(project) { project.nil? ? gt('user_achievement.project_id' => 0) : where('user_achievement.project_id' => ((project.is_a? Project) ? project.id : project)) }
     scope :by_achievements, ->(achievements) { (achievements && achievements.size > 0) ?
                                                     where(:achievement_id.in => (
                                                                 achievements[0].class == Achievement ? achievements.map(&:id) :

@@ -16,7 +16,6 @@ class UserInProgressAchievement
     validates :achievement_id, presence: true, uniqueness: true
 
     scope :by_user, ->(user) {where('user_achievement.user_id' => user)}
-    scope :by_project, ->(project) { project.nil? ? gt('user_achievement.project_id' => 0) : where('user_achievement.project_id' => project) }
     scope :by_achievements, ->(achievements) { (achievements && achievements.size > 0) ?
                                                     where('user_achievement.in_progress.achievement_id'.to_sym.in => (achievements[0].class == Achievement ? achievements.map(&:id) : achievements)) :
                                                     gt('user_achievement.in_progress.achievement_id' => 0)

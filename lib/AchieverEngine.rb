@@ -21,19 +21,20 @@ module AchieverEngine
     autoload :Obtained,     'AchieverEngine/Obtained'
     autoload :Graph,        'AchieverEngine/Graph'
     autoload :VERSION,      'AchieverEngine/Version'
+    autoload :Models,       'AchieverEngine/Models'
 
     def self.setup
         yield AchieverEngine::Config
         AchieverEngine::Config.parse_configuration
+
+        ::ActiveRecord::Base.extend AchieverEngine::Models
     end
 =begin
 
     @group Test Achievements for an user
     @group Modify User Achievements
 
-    @param options == {:user= > user, :project => project, :data => data)}
-
-    @param project achievement's associated project, Object with readable id attribute, or directly a numeric value
+    @param options == {:user= > user, :data => data)}
 
     @param user user to test achievement, Object with id attribute, or directly a numeric value
 
@@ -43,13 +44,12 @@ module AchieverEngine
 =end
     def self.hit(options, data)
 
-        project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
         user_id     = (options[:user].is_a?(Numeric) ? options[:user] : options[:user].id)
         data        = [data] if data.is_a? Hash
 
-        user_achievements = UserAchievement.by_project(project_id).by_user(user_id).find_or_create_by(:project_id => project_id, :user_id => user_id)
+        user_achievements = UserAchievement.by_user(user_id).find_or_create_by(:user_id => user_id)
 # p user_achievements.in_progress
-        in_progress_achievements = AchieverEngine::Search.achievements_for(:project => project_id, :user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_IN_PROGRESS_MODE, :mongo_data => true)
+        in_progress_achievements = AchieverEngine::Search.achievements_for(:user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_IN_PROGRESS_MODE, :mongo_data => true)
 # p in_progress_achievements
         in_progress_achievements[:in_progress_data] = self.reorder_mg_achievements(in_progress_achievements[:in_progress_data])
 
@@ -70,7 +70,7 @@ module AchieverEngine
                             in_progress.user_achievement.save
 
                             #callback obtained achievement
-                            Rails.logger.debug("Achievement obtained on project ##{project_id} for user ##{user_id} : ##{achievement.id} - #{achievement.name}")
+                            Rails.logger.debug("Achievement obtained for user ##{user_id} : ##{achievement.id} - #{achievement.name}")
                         else
                             in_progress.inc(:progress, input_data[:incr])
                         end
@@ -79,7 +79,7 @@ module AchieverEngine
             end
         end
 
-        available_achievements = AchieverEngine::Search.achievements_for(:project => project_id, :user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE)
+        available_achievements = AchieverEngine::Search.achievements_for(:user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE)
 
 # p available_achievements
 # p in_progress_achievements[:in_progress_data]
@@ -99,7 +99,6 @@ module AchieverEngine
                             user_achievements.save
 
                             new_available_achievements = AchieverEngine::Search.achievements_for(
-                                        :project            => project_id,
                                         :user               => user_id,
                                         :clean_achievements => available_achievements,
                                         :user_obtained      => user_achievements.obtained,
@@ -109,7 +108,7 @@ module AchieverEngine
                             available_achievements.merge new_available_achievements # push new available achievements for the test
 
                             #callback it
-                            Rails.logger.debug("Achievement obtained on project ##{project_id} for user ##{user_id} : ##{achievement.id} - #{achievement.name}")
+                            Rails.logger.debug("Achievement obtained for user ##{user_id} : ##{achievement.id} - #{achievement.name}")
 
 
                         else

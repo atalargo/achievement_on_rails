@@ -156,7 +156,6 @@ module AchieverEngine
 
         def self.filter_options(options)
 
-            project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
             user_id     = (options[:user].is_a?(Numeric) ? options[:user] : options[:user].id)
 
         end
