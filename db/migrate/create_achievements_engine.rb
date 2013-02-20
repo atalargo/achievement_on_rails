@@ -1,5 +1,5 @@
 class CreateAchievementsEngine < ActiveRecord::Migration
-  def change
+  def self.up
     create_table :achievements do |t|
       t.string  :name, :null => false
       t.string  :behaviour_type, :null => false
@@ -25,7 +25,7 @@ class CreateAchievementsEngine < ActiveRecord::Migration
 
   end
 
-  def down
+  def self.down
     drop_table :achievement_relations
     drop_table :achievements
   end
