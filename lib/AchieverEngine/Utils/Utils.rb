@@ -3,6 +3,8 @@ module AchieverEngine
     module Utils
         autoload :Nanoc, 'AchieverEngine/Utils/Nanoc/DirectedGraph'
 
+        require 'AchieverEngine/Utils/AchievementGraphException'
+
         class DirectedGraph < AchieverEngine::Utils::Nanoc::DirectedGraph
 
 
@@ -60,7 +62,7 @@ module AchieverEngine
     @return [boolean] true if superflous edge
 =end
             def check_superfluous_edge(edge)
-                !get_superflous_edge(edge)
+                !get_superflous_edge(edge).empty?
             end
 
 =begin
@@ -83,11 +85,8 @@ module AchieverEngine
                 # si le nouvel enfant n'est pas déjà dans tout les enfants quelque soit la profondeur du parent, renvoyé directement []
                 return [] if (!successors_of(edge.parent).include?(edge.achievement))
 
-                # TODO construire le(s) chemin(s) qui les relit déjà
-                paths = []
-
+                recursive_direct_successors(edge.parent, edge.achievement, [edge.achievement])
             end
-
 =begin
     @param [AchievementRelation]
 
@@ -105,7 +104,7 @@ module AchieverEngine
                 # rebuild different paths
                 visited = []
                 paths = []
-                p cyclic_vertices
+#                 p cyclic_vertices
                 direct_successors_of(vertex).each do |child|
                     if cyclic_vertices.include? child
                         paths << get_sub_for_cycle_path(vertex, child, visited, cyclic_vertices)
@@ -117,7 +116,7 @@ module AchieverEngine
             def get_sub_for_cycle_path(parent, vertex, visited, cyclic_vertices)
                 local_path = []
                 visited << vertex
-                p vertex.id
+#                 p vertex.id
                 local_path << vertex
                 direct_successors_of(vertex).each do |child|
                     if !visited.include? child
@@ -125,7 +124,7 @@ module AchieverEngine
                             if parent == child
                                 break
                             else
-                                p "sub"
+#                                 p "sub"
 #                                 local_path << child
                                 subs = get_sub_for_cycle_path(parent, child, visited, cyclic_vertices)
                                 local_path << subs if !subs.empty?
@@ -145,6 +144,19 @@ module AchieverEngine
             end
 
             private
+            def recursive_direct_successors(from, to, path)
+                direct_successors_of(from).each do |suc|
+                    if suc == to
+                        return path << from
+                    else
+                        path_priv = recursive_direct_successors(suc, to, path)
+                        if !path_priv.empty?
+                            return path << from
+                        end
+                    end
+                end
+                path
+            end
 
 =begin
     @return [boolean] true if cycle found, false is all ok

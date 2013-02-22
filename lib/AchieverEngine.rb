@@ -5,6 +5,7 @@
 # require File.dirname(File.expand_path(__FILE__))+'/../app/models/user_in_progress_achievement'
 # require File.dirname(File.expand_path(__FILE__))+'/../app/models/user_obtained_achievement'
 
+
 autoload :Achievement,                  'AchieverEngine/models/achievement'
 autoload :AchievementRelation,          'AchieverEngine/models/achievement_relation'
 autoload :UserAchievement,              'AchieverEngine/models/user_achievement'

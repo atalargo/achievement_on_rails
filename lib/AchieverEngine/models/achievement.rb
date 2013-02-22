@@ -5,10 +5,14 @@ class Achievement < ActiveRecord::Base
     attr_accessible :active, :name, :behaviour_type, :steps, :on_type, :value
 
     has_and_belongs_to_many :parents, :class_name => 'Achievement', :join_table => 'achievement_relations', :association_foreign_key => :parent_id,
-                        :before_add => :relation_validator_parent
+                        :before_add => :relation_validator_parent, :insert_sql => lambda {|record|
+                            AchievementRelation.new(:parent_id => record.id, :achievement_id => self.id).rel_save_sql
+                        }
 
     has_and_belongs_to_many :children, :class_name => 'Achievement', :join_table => 'achievement_relations', :foreign_key => :parent_id,
-                        :before_add => :relation_validator_child
+                        :before_add => :relation_validator_child, :insert_sql => lambda {|record|
+                            AchievementRelation.new(:parent_id => self.id, :achievement_id => record.id).rel_save_sql
+                        }
 
 #     has_many :achievement_relations_children, :class_name => 'AchievementRelation', :foreign_key => :parent_id
 #     has_many :children, :class_name => 'Achievement', :through => :achievement_relations_children, :foreign_key => :parent_id, :source => :achievement
@@ -22,6 +26,11 @@ class Achievement < ActiveRecord::Base
 
     before_create   :check_create_cyclic
     before_update   :check_update_cyclic
+
+
+    validates :behaviour_type,  :presence => true
+    validates :name,            :presence => true
+    validates :on_type,         :presence => true
 
 
     def root?
@@ -119,18 +128,16 @@ class Achievement < ActiveRecord::Base
 
     private
 
-    def check_create_cyclic(record)
+    def check_create_cyclic(record = nil)
+        record = self if record.nil?
         p "check_create_cyclic"
-        AchieverEngine::Graph.create_nanoc_directed_graph(Achievement.includes(:children).all).check_cyclic_for_vertex(record)
+        !AchieverEngine::Graph.create_nanoc_directed_graph(Achievement.includes(:children).all).check_cyclic_for_vertex(record)
     end
 
-    def check_update_cyclic(record)
+    def check_update_cyclic(record = nil)
+        record = self if record.nil?
         p "check_update_cyclic"
-        if record.active
-            check_cyclic(record)
-        else
-            true
-        end
+        check_create_cyclic(record)
     end
 
     def relation_validator_child(record)
@@ -138,7 +145,7 @@ class Achievement < ActiveRecord::Base
     end
 
     def relation_validator_parent(record)
-        relation_validator_parent(record, self)
+        relation_validator(record, self)
     end
 
     def relation_validator(parent, child)

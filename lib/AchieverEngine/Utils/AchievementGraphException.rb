@@ -22,12 +22,22 @@ module AchieverEngine
         end
 
 =begin
+    Exception when add a relation which already defined
+=end
+        class AlreadyDefinedEdgeAchievementException < Exception
+
+            def initialize(parent, achievement)
+                super "You try to add an edge relation between Achievement ##{parent.id} and Achievement ##{achievement.id} and it's already defined'"
+            end
+        end
+
+=begin
     Exception when add a superflous relation between two achievement
 =end
         class SuperflousEdgeAchievementException < Exception
 
             def initialize(parent, achievement)
-                super "You try to add an edge relation between Achievement ##{parent.id} and Achievement ##{child.id}"
+                super "You try to add an edge relation between Achievement ##{parent.id} and Achievement ##{achievement.id}"
             end
         end
 

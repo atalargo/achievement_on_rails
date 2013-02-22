@@ -1,0 +1,30 @@
+
+two_three:
+  parent_id: 1
+  achievement_id: 2
+
+three_five:
+  parent_id: 2
+  achievement_id: 5
+
+three_two:
+  parent_id: 2
+  achievement_id: 1
+
+two_two:
+  parent_id: 2
+  achievement_id: 2
+
+three_four:
+  parent_id: 2
+  achievement_id: 3
+
+two_four:
+  parent_id: 1
+  achievement_id: 3
+
+four_two:
+  parent_id: 3
+  achievement_id: 1
+
+

@@ -1,0 +1,42 @@
+---
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
+
+one:
+  name: MyString
+  behaviour_type:
+  active: false
+  on_type: xp
+  steps: 1
+  value: 10
+
+two:
+  name: two
+  behaviour_type: badge
+  active: false
+  on_type: points
+  steps: 1
+  value: 10
+
+three:
+  name: three
+  behaviour_type: badge
+  active: false
+  on_type: points
+  steps: 1
+  value: 100
+
+four:
+  name: four
+  behaviour_type: badge
+  active: true
+  on_type: xp
+  steps: 1
+  value: 1000
+
+five:
+  name: five
+  behaviour_type: badge
+  active: true
+  on_type: xp
+  steps: 1
+  value: 10000
