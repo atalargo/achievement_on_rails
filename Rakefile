@@ -23,6 +23,12 @@ task :'db:migrate' do |t|
     CreateAchievementsEngine.up
 end
 
+namespace :test do
+    desc "Console IRB with require for test"
+    task :console do |t|
+        exec "irb -r irb/completion -r mongoid -r active_record -r ./test/console"
+    end
+end
 
 require './test/test_helper.rb'
 

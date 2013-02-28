@@ -6,6 +6,8 @@ require 'active_record'
 require 'active_record/fixtures'
 require 'active_record/test_case'
 
+require 'mongoid'
+
 class ActiveSupport::TestCase
     include ActiveRecord::TestFixtures
 
@@ -53,3 +55,12 @@ end
 def create_fixtures(*table_names, &block)
     Fixtures.create_fixtures(ActiveSupport::TestCase.fixture_path, table_names, {}, &block)
 end
+
+Mongoid::Config.load_configuration({
+    :sessions => { :default => {
+                            :database => 'achiever_testunit',
+                            :hosts => ['localhost:27017'],
+                            :username =>  'achiever',
+                            :password =>  '4ch13v3r'
+    }}
+})
