@@ -55,6 +55,26 @@ module AchieverEngine
 
 #         p in_progress_achievements
 
+        self.in_progress_achievements_check(in_progress_achievements, data)
+
+        available_achievements = AchieverEngine::Search.achievements_for(:project => project_id, :user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE)
+
+# p available_achievements
+# p in_progress_achievements[:in_progress_data]
+
+        self.available_achievements_check(in_progress_achievements, available_achievements, data)
+    end
+
+    protected
+    def self.reorder_mg_achievements(mg_collection)
+        reorder = {}
+        mg_collection.each do |doc|
+            reorder[doc.achievement_id] = doc
+        end
+        reorder
+    end
+
+    def self.in_progress_achievements_check(in_progress_achievements, data)
         in_progress_achievements[:achievements].each do |achievement|
             data.each do |input_data|
                 if input_data[:type] == achievement.on_type
@@ -78,12 +98,9 @@ module AchieverEngine
                 end
             end
         end
+    end
 
-        available_achievements = AchieverEngine::Search.achievements_for(:project => project_id, :user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE)
-
-# p available_achievements
-# p in_progress_achievements[:in_progress_data]
-
+    def self.available_achievements_check(in_progress_achievements, available_achievements, data)
         available_achievements.each do |achievement|
 
             next if in_progress_achievements[:in_progress_data].has_key? achievement.id
@@ -99,11 +116,11 @@ module AchieverEngine
                             user_achievements.save
 
                             new_available_achievements = AchieverEngine::Search.achievements_for(
-                                        :project            => project_id,
-                                        :user               => user_id,
-                                        :clean_achievements => available_achievements,
-                                        :user_obtained      => user_achievements.obtained,
-                                        :mode               => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE
+                                :project            => project_id,
+                                :user               => user_id,
+                                :clean_achievements => available_achievements,
+                                :user_obtained      => user_achievements.obtained,
+                                :mode               => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE
                             )
 
                             available_achievements.merge new_available_achievements # push new available achievements for the test
@@ -120,14 +137,5 @@ module AchieverEngine
                 end
             end
         end
-    end
-
-    protected
-    def self.reorder_mg_achievements(mg_collection)
-        reorder = {}
-        mg_collection.each do |doc|
-            reorder[doc.achievement_id] = doc
-        end
-        reorder
     end
 end
