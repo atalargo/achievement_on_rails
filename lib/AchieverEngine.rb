@@ -12,7 +12,7 @@ autoload :UserInProgressAchievement,    'AchieverEngine/models/user_in_progress_
 autoload :UserObtainedAchievement,      'AchieverEngine/models/user_obtained_achievement'
 
 module AchieverEngine
-
+    autoload :Checker,      'AchieverEngine/Checker'
     autoload :Config,       'AchieverEngine/Config'
     autoload :Behaviour,    'AchieverEngine/Behaviour'
     autoload :Utils,        'AchieverEngine/Utils'
@@ -49,95 +49,11 @@ module AchieverEngine
 
         in_progress_achievements = AchieverEngine::Search.achievements_for(:project => project_id, :user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_IN_PROGRESS_MODE, :mongo_data => true)
 # p in_progress_achievements
-        in_progress_achievements[:in_progress_data] = self.reorder_mg_achievements(in_progress_achievements[:in_progress_data])
 
 #         p in_progress_achievements
 
-        self.in_progress_achievements_check(in_progress_achievements, data)
-
-# p in_progress_achievements[:in_progress_data]
-
-        self.available_achievements_check(in_progress_achievements, data)
+        AchieverEngine::Checker.new(in_progress_achievements, data).check
     end
 
-    protected
-    def self.reorder_mg_achievements(mg_collection)
-        reorder = {}
-        mg_collection.each do |doc|
-            reorder[doc.achievement_id] = doc
-        end
-        reorder
-    end
-
-    def self.in_progress_achievements_check(in_progress_achievements, data)
-        in_progress_achievements[:achievements].each do |achievement|
-            data.each do |input_data|
-
-                if input_data[:type] == achievement.on_type && achievement.behaviour_type = 'badge'
-
-                    in_progress = in_progress_achievements[:in_progress_data][achievement.id]
-
-                    if input_data[:incr] + in_progress.progress >= achievement.value
-                        # validate achievement
-                        new_ach = UserObtainedAchievement.new
-                        new_ach.achievement_id = achievement.id
-                        in_progress.user_achievement.obtained << new_ach
-                        in_progress.destroy
-                        in_progress.user_achievement.save
-
-                        #callback obtained achievement
-                        Rails.logger.debug("Achievement obtained on project ##{project_id} for user ##{user_id} : ##{achievement.id} - #{achievement.name}")
-                    else
-                        in_progress.inc(:progress, input_data[:incr])
-                    end
-                end
-            end
-        end
-    end
-
-    def self.available_achievements_check(in_progress_achievements, data)
-
-        user_achievements = UserAchievement.by_project(project_id).by_user(user_id).find_or_create_by(:project_id => project_id, :user_id => user_id)
-
-        available_achievements = AchieverEngine::Search.achievements_for(:project => project_id, :user => user_id, :mode => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE)
-
-        # p available_achievements
-
-        available_achievements.each do |achievement|
-
-            next if in_progress_achievements[:in_progress_data].has_key? achievement.id
-
-            data.each do |input_data|
-                if input_data[:type] == achievement.on_type && achievement.behaviour_type == 'badge'
-                    if input_data[:incr] >= achievement.value
-                        # obtained achievement
-                        new_ach = UserObtainedAchievement.new
-                        new_ach.achievement_id = achievement.id
-                        user_achievements.obtained << new_ach
-                        user_achievements.save
-
-                        new_available_achievements = AchieverEngine::Search.achievements_for(
-                            :project            => project_id,
-                            :user               => user_id,
-                            :clean_achievements => available_achievements,
-                            :user_obtained      => user_achievements.obtained,
-                            :mode               => AchieverEngine::Search::ACHIEVEMENT_AVAILABLE_MODE
-                        )
-
-                        available_achievements.merge new_available_achievements # push new available achievements for the test
-
-                        #callback it
-                        Rails.logger.debug("Achievement obtained on project ##{project_id} for user ##{user_id} : ##{achievement.id} - #{achievement.name}")
-
-
-                    else
-                        user_achievements.in_progress.new(achievement_id: achievement.id, progress: input_data[:incr])
-                        user_achievements.save
-                    end
-                end
-            end
-        end
-
-    end
 
 end
