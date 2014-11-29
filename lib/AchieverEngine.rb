@@ -131,8 +131,8 @@ module AchieverEngine
 
 
                     else
-                        in_pro_ach = user_achievements.in_progress.new(achievement_id: achievement.id, progress: input_data[:incr])
-                        p user_achievements.save
+                        user_achievements.in_progress.new(achievement_id: achievement.id, progress: input_data[:incr])
+                        user_achievements.save
                     end
                 end
             end
