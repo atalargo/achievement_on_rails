@@ -146,44 +146,33 @@ p options
                         end
                     end
                     availables
-                when ACHIEVEMENT_OBTAINED_MODE
-                    user_achs = AchieverEngine::Obtained.get_for_user_and_achievements(options)
-                    achs = if user_achs.size == 0
-                                []
-                            else
-                                Achievement.active.by_project(project_id).in(user_achs.map(&:achievement_id))
-                    end
-                    if mongo_data
-                        {:achievements => achs, :obtained => user_achs}
-                    else
-                        achs
-                    end
-                when ACHIEVEMENT_IN_PROGRESS_MODE
-                    user_ach_ps = AchieverEngine::InProgress.get_for_user_and_achievements(options)
+                when ACHIEVEMENT_OBTAINED_MODE || ACHIEVEMENT_IN_PROGRESS_MODE
 
-                    achs = if user_ach_ps.size == 0
-                                []
-                            else
-                                Achievement.active.by_project(project_id).in(user_ach_ps.map(&:achievement_id))
+                    user_achs = ( mode == ACHIEVEMENT_OBTAINED_MODE ? AchieverEngine::Obtained : AchieverEngine::InProgress).get_for_user_and_achievements(options)
+
+                    achs = if user_achs.size == 0
+                        []
+                    else
+                        Achievement.active.by_project(project_id).in(user_achs.map(&:achievement_id))
                     end
+
                     if mongo_data
-                        {:achievements => achs, :in_progress_data => user_ach_ps}
+                        mongo_ret = {:achievements => achs}
+                        (mode == ACHIEVEMENT_OBTAINED_MODE ? mongo_ret[:obtained] = user_achs : mongo_ret[:in_progress_data] = user_achs)
+                        mongo_ret
                     else
                         achs
                     end
+
                 else
+                    lam = lambda{ |project_id, user_filtered_achs|
+                        user_filtered_achs.size == 0 ? [] : Achievement.active.by_project(project_id).in(user_filtered_achs.map(&:achievement_id))
+                    }
+
                     user_achs = UserAchievement.by_project(project_id).by_user(user_id).first
                     {
-                        :obtained => (user_achs.nil? ? [] : (
-                                                            user_achs.obtained.size == 0 ?
-                                                                [] :
-                                                                Achievement.active.by_project(project_id).in(user_achs.obtained.map(&:achievement_id))
-                        )),
-                        :in_progress => (user_achs.nil? ? [] : (
-                                                                user_achs.in_progress.size == 0  ?
-                                                                    [] :
-                                                                    Achievement.active.by_project(project_id).in(user_achs.in_progress.map(&:achievement_id))
-                        ))
+                        :obtained => (user_achs.nil? ? [] : lam.call(project_id, user_achs.obtained) ),
+                        :in_progress => (user_achs.nil? ? [] : lam.call(project_id, user_achs.in_progress) )
                     }
             end
         end
