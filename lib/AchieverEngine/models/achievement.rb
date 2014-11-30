@@ -72,7 +72,7 @@ class Achievement < ActiveRecord::Base
         # Quicklest query in PostreSQL
         # SELECT "achievements".* FROM "achievements" WHERE ("achievements"."id" NOT IN (SELECT DISTINCT achievement_id FROM "achievement_relations" ));
 
-        self.by_project(project_id).where(arel_table[:id].not_in(AchievementRelation.select(:achievement_id).by_project(project_id).uniq.arel))
+#         self.by_project(project_id).where(arel_table[:id].not_in(AchievementRelation.select(:achievement_id).by_project(project_id).uniq.arel))
 
     end
 
@@ -85,7 +85,8 @@ class Achievement < ActiveRecord::Base
 
 #         self.where('id NOT IN (%s)', 'SELECT DISTINCT "achievements".id FROM "achievements" INNER JOIN "achievement_relations" ON "achievements"."id" = "achievement_relations"."parent_id"').uniq
 
-        self.by_project(project_id).where(arel_table[:id].not_in(AchievementRelation.select(:parent_id).by_project(project_id).uniq.arel))
+#         self.by_project(project_id).where(arel_table[:id].not_in(AchievementRelation.select(:parent_id).by_project(project_id).uniq.arel))
+        self.extrem_nodes(:parent_id)
     end
 
     #
@@ -95,7 +96,8 @@ class Achievement < ActiveRecord::Base
         # Quicklest query in PostreSQL
         # SELECT "achievements".* FROM "achievements" WHERE ("achievements"."id" IN (SELECT DISTINCT achievement_id FROM "achievement_relations" ));
 
-        self.by_project(project_id).where(arel_table[:id].in(AchievementRelation.select(:achievement_id).by_project(project_id)).uniq.arel)
+#         self.by_project(project_id).where(arel_table[:id].in(AchievementRelation.select(:achievement_id).by_project(project_id)).uniq.arel)
+        self.extrem_nodes(:achievement_id)
     end
 
     #
@@ -157,4 +159,7 @@ class Achievement < ActiveRecord::Base
        AchievementRelation.check_relation(parent, child)
     end
 
+    def self.extrem_nodes(sym_type)
+        self.by_project(project_id).where(arel_table[:id].not_in(AchievementRelation.select(sym_type).by_project(project_id).uniq.arel))
+    end
 end

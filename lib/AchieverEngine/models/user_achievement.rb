@@ -27,18 +27,13 @@ class UserAchievement
     scope :by_project, ->(project) { project.nil? ? where(:project_id.gt => 0) : where(:project_id => project) }
     scope :for_obtained, ->(list_achievement) {
                                 (!list_achievement || list_achievement.count == 0) ?
-                                #where('obtained.achievement_id'.to_sym.gt => 0)
                                 gt('obtained.achievement_id' => 0) :
-                                where('obtained.achievement_id'.to_sym.in =>
-                                    ((list_achievement[0].is_a? Achievement) ? list_achievement.map(&:id) : list_achievement  )
-                                )
+                                where('obtained.achievement_id'.to_sym.in => UserAchievement.list_ids_achievements(list_achievement) )
     }
     scope :for_in_progress, ->(list_achievement) {
                                 (!list_achievement || list_achievement.count == 0) ?
                                 gt('in_progress.achievement_id' => 0) :
-                                where('in_progress.achievement_id'.to_sym.in =>
-                                    ((list_achievement[0].is_a? Achievement) ? list_achievement.map(&:id) : list_achievement  )
-                                )
+                                where('in_progress.achievement_id'.to_sym.in => UserAchievement.list_ids_achievements(list_achievement) )
     }
 
     def all_achievements
@@ -59,6 +54,10 @@ class UserAchievement
 
     def self.in_progress
         :in_progress
+    end
+
+    def self.list_ids_achievements(list_achievements)
+        ((list_achievement[0].is_a? Achievement) ? list_achievement.map(&:id) : list_achievement  )
     end
 
 end
