@@ -8,6 +8,10 @@ module AchieverEngine
             def self.inherited(sub)
                 class << sub
                     cattr_accessor :type
+
+                    def check
+                        throw Exception.new('The method \'check\' must be overloaded in ' + self.class_name);
+                    end
                 end
 
                 sub.class_eval <<-METHOD
