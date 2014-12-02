@@ -3,6 +3,7 @@ module AchieverEngine
     module Search
 
         class SearchSimple
+            
             def initialize(options)
                 @project_id  = (options[:project].is_a?(Numeric) ? options[:project] : options[:project].id)
 
