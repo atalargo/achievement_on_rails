@@ -32,10 +32,8 @@ module AchieverEngine
                             end
                         else
                             #             print "Reject ach, #{ach.parent.parents.count} #{!@obtained.has_key?(ach.parent_id)} Push parent \n"
-                            if !obtained.has_key?(ach.parent_id) && !reject_ids.include?( ach.parent_id) #ach.parent.parents.count == 0 &&
-                                if !obtainable_ids.include? ach.parent_id
-                                    obtainable_ids.push ach.parent_id
-                                end
+                            if !obtained.has_key?(ach.parent_id) && !reject_ids.include?( ach.parent_id) &&  !obtainable_ids.include? ach.parent_id #ach.parent.parents.count == 0
+                                obtainable_ids.push ach.parent_id
                             end
                             reject_ids.push ach.achievement_id
                         end
