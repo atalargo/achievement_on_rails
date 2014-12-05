@@ -1,0 +1,6 @@
+test_achievement:
+    adapter: postgres
+    database: achiever_test
+    user: achiever
+    password: 4ch13v3r
+    host: 192.168.180.135
